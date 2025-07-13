@@ -7,3 +7,7 @@ Features 1:
 
 Feature 2:
 - let's now trigger the Pomodoro timer counting down not by click, but by detecting user active behaviours on the screen, e.g. moving mouse, typing, etc.
+- Looks like now it detect moving mouse, but not the typing
+
+Feature 3:
+when the counting down is finished, giving an notification of "Time's up!"

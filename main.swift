@@ -1,5 +1,14 @@
 import Cocoa
 import IOKit.pwr_mgt
+import Carbon
+
+// Event tap callback for keyboard monitoring
+func keyboardCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
+    if let appDelegate = NSApp.delegate as? AppDelegate {
+        appDelegate.userActivityDetected()
+    }
+    return Unmanaged.passRetained(event)
+}
 
 // Default Pomodoro duration in minutes
 let defaultPomodoroMinutes = 25
@@ -12,6 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var lastActivityTime = Date()
     var activityMonitorTimer: Timer?
     var globalEventMonitor: Any?
+    var localEventMonitor: Any?
     var window: NSWindow!
     var circleView: CircleView!
     var initialDragLocation: NSPoint?
@@ -56,10 +66,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func setupActivityMonitoring() {
-        // Monitor global mouse and keyboard events
-        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] _ in
+        // Monitor global mouse events
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.userActivityDetected()
         }
+        
+        // Monitor local keyboard events (for the app)
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { [weak self] event in
+            self?.userActivityDetected()
+            return event
+        }
+        
+        // Register for workspace notifications to detect activity
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(userDidBecomeActive),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+        
+        // Set up a global event tap for keyboard events
+        setupKeyboardEventTap()
         
         // Set up a timer to check for inactivity
         activityMonitorTimer = Timer.scheduledTimer(timeInterval: 5.0, target: self, selector: #selector(checkUserActivity), userInfo: nil, repeats: true)
@@ -73,6 +100,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !isTimerRunning && secondsRemaining > 0 {
             startTimer()
         }
+        
+        // Debug output to confirm activity detection
+        print("Activity detected at \(Date())")
+    }
+    
+    @objc func userDidBecomeActive(notification: Notification) {
+        userActivityDetected()
+    }
+    
+    func setupKeyboardEventTap() {
+        // Create an event tap to monitor keyboard events
+        let eventMask = (1 << CGEventType.keyDown.rawValue) | 
+                       (1 << CGEventType.keyUp.rawValue) | 
+                       (1 << CGEventType.flagsChanged.rawValue)
+        
+        guard let eventTap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: CGEventMask(eventMask),
+            callback: keyboardCallback,
+            userInfo: nil
+        ) else {
+            print("Failed to create event tap")
+            return
+        }
+        
+        // Create a run loop source and add it to the current run loop
+        let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
+        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        
+        // Enable the event tap
+        CGEvent.tapEnable(tap: eventTap, enable: true)
+        
+        print("Keyboard event tap set up successfully")
     }
     
     @objc func checkUserActivity() {
@@ -217,5 +279,10 @@ class CircleView: NSView {
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
+
+// Request accessibility permissions for monitoring keyboard events
+let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+AXIsProcessTrustedWithOptions(options as CFDictionary)
+
 app.setActivationPolicy(.accessory) // Makes the app not appear in the Dock
 app.run()
