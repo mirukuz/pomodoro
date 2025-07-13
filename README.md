@@ -1,21 +1,40 @@
-# Pomodoro
-Minimalist Pomodoro App
+# Pomodoro Timer
+A minimalist Pomodoro timer app for macOS
 
 ## Description
-A simple macOS application that displays a static circle floating above all screen elements. The circle is designed to hover above all windows and be visible across all spaces/desktops.
+A lightweight macOS application that displays a floating circle timer that stays on top of all windows. The app helps you manage your work sessions using the Pomodoro technique with visual and audible notifications.
 
 ## Features
-- Displays a semi-transparent blue circle
-- Always stays on top of other windows
+- Interactive floating timer with color-coded states:
+  - Blue: Timer paused
+  - Green: Timer running
+  - Flashing red/orange: Timer finished
+- Automatic timer control based on user activity:
+  - Starts when you're active (if paused)
+  - Pauses after configurable inactivity period
+  - Requires manual restart after completion
+- Visual and audible notifications when timer completes
+- Session logging to track productivity
+- Draggable interface
 - Visible across all spaces/desktops
-- No interactive functionality (static display only)
 
 ## Requirements
 - macOS 10.15 or later
+- Accessibility permissions (for keyboard activity monitoring)
 
 ## Usage
 Compile and run the application using:
 ```
-swiftc main.swift -o pomodoro
-./pomodoro
+swift pomodoro.swift
+```
+
+## Configuration
+You can modify these constants in the source code:
+- `defaultPomodoroMinutes`: Duration of each Pomodoro session (default: 1 minute)
+- `inactivityThresholdSeconds`: Time before pausing due to inactivity (default: 5 seconds)
+
+## Testing
+Run the test suite with:
+```
+swift SimplePomodoroTests.swift
 ```
