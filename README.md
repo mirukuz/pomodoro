@@ -32,6 +32,26 @@ swift pomodoro.swift
 You can modify these constants in the source code:
 - `defaultPomodoroMinutes`: Duration of each Pomodoro session (default: 1 minute)
 - `inactivityThresholdSeconds`: Time before pausing due to inactivity (default: 5 seconds)
+- `alarmSoundName`: Name of the sound file to play when timer finishes (default: "Submarine")
+
+### Customizing the Alarm Sound
+The app uses macOS system sounds for the alarm. You can change the `alarmSoundName` constant to any of the following system sounds:
+- Basso
+- Blow
+- Bottle
+- Frog
+- Funk
+- Glass
+- Hero
+- Morse
+- Ping
+- Pop
+- Purr
+- Sosumi
+- Submarine
+- Tink
+
+You can also use your own custom sounds by placing .aiff files in `~/Library/Sounds/` and using the filename (without extension) as the `alarmSoundName`.
 
 ## Session Logging
 The app automatically logs your Pomodoro sessions to a file in your home directory. Each log entry includes:

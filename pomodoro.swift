@@ -7,10 +7,13 @@ import Carbon
 // ======================================================
 
 // Default Pomodoro duration in minutes
-let defaultPomodoroMinutes = 1
+let defaultPomodoroMinutes = 30
 
 // Inactivity threshold in seconds before stopping the timer
-let inactivityThresholdSeconds = 5
+let inactivityThresholdSeconds = 60
+
+// Alarm sound file name (must be in ~/Library/Sounds/ or /System/Library/Sounds/)
+let alarmSoundName = "Submarine"
 
 // ======================================================
 // MARK: - Event Tap Callback
@@ -433,7 +436,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         circleView.timerFinished = true
         
         // Play alarm sound
-        NSSound.beep()
+        if let sound = NSSound(named: alarmSoundName) {
+            sound.play()
+        } else {
+            // Fallback to system beep if sound file not found
+            NSSound.beep()
+        }
         
         // Start flashing animation
         startFlashingAnimation()
