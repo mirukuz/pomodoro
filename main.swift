@@ -1,9 +1,17 @@
 import Cocoa
+import IOKit.pwr_mgt
 
 // Default Pomodoro duration in minutes
-let defaultPomodoroMinutes = 1
+let defaultPomodoroMinutes = 25
+
+// Inactivity threshold in seconds before stopping the timer
+let inactivityThresholdSeconds = 5
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    // Activity monitoring
+    var lastActivityTime = Date()
+    var activityMonitorTimer: Timer?
+    var globalEventMonitor: Any?
     var window: NSWindow!
     var circleView: CircleView!
     var initialDragLocation: NSPoint?
@@ -12,12 +20,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var isTimerRunning = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Set up activity monitoring
+        setupActivityMonitoring()
         // Create the circle view
         circleView = CircleView(frame: NSRect(x: 0, y: 0, width: 150, height: 150))
         
         // Create the window
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 150, height: 150),
+            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -45,6 +55,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
     }
     
+    func setupActivityMonitoring() {
+        // Monitor global mouse and keyboard events
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] _ in
+            self?.userActivityDetected()
+        }
+        
+        // Set up a timer to check for inactivity
+        activityMonitorTimer = Timer.scheduledTimer(timeInterval: 5.0, target: self, selector: #selector(checkUserActivity), userInfo: nil, repeats: true)
+    }
+    
+    func userActivityDetected() {
+        // Update the last activity time
+        lastActivityTime = Date()
+        
+        // Start the timer if it's not already running
+        if !isTimerRunning && secondsRemaining > 0 {
+            startTimer()
+        }
+    }
+    
+    @objc func checkUserActivity() {
+        // Check if user has been inactive for the threshold period
+        let currentTime = Date()
+        let inactivityDuration = currentTime.timeIntervalSince(lastActivityTime)
+        
+        // If user has been inactive for more than the threshold and timer is running, pause it
+        if inactivityDuration > Double(inactivityThresholdSeconds) && isTimerRunning {
+            stopTimer()
+        }
+    }
+    
+    // Manual start/stop (still available but not the primary method)
     func startStopTimer() {
         if isTimerRunning {
             stopTimer()
@@ -163,13 +205,10 @@ class CircleView: NSView {
     }
     
     override func mouseUp(with event: NSEvent) {
-        // If we didn't move much, consider it a click to start/stop the timer
-        if let initialLocation = delegate?.initialDragLocation,
-           abs(initialLocation.x - event.locationInWindow.x) < 5 &&
-           abs(initialLocation.y - event.locationInWindow.y) < 5 {
-            delegate?.startStopTimer()
-        }
+        // We're no longer using clicks to start/stop the timer,
+        // but we'll keep the code in case we want to revert or add additional functionality
         
+        // Reset the drag location
         delegate?.initialDragLocation = nil
     }
 }
