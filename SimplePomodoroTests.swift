@@ -127,8 +127,6 @@ func testSessionLogger() -> [TestCase] {
         Total Duration: \(formatTimeInterval(totalSessionDuration))
         Active Time: \(formatTimeInterval(activeTime))
         Inactive Time: \(formatTimeInterval(totalSessionDuration - activeTime))
-        ===========================
-        
         """
         
         do {

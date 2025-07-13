@@ -33,6 +33,19 @@ You can modify these constants in the source code:
 - `defaultPomodoroMinutes`: Duration of each Pomodoro session (default: 1 minute)
 - `inactivityThresholdSeconds`: Time before pausing due to inactivity (default: 5 seconds)
 
+## Session Logging
+The app automatically logs your Pomodoro sessions to a file in your home directory. Each log entry includes:
+- Start time
+- End time
+- Total duration
+- Active time
+- Inactive time
+
+To view your session logs:
+```
+cat ~/pomodoro_log.txt
+```
+
 ## Testing
 Run the test suite with:
 ```
