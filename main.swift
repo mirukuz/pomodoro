@@ -96,13 +96,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Update the last activity time
         lastActivityTime = Date()
         
-        // Start the timer if it's not already running
-        if !isTimerRunning && secondsRemaining > 0 {
+        // Do NOT restart the timer if it has finished - require a manual click
+        // Only start the timer if it's not already running, not finished, and has time remaining
+        if !circleView.timerFinished && !isTimerRunning && secondsRemaining > 0 {
             startTimer()
         }
         
         // Debug output to confirm activity detection
-        print("Activity detected at \(Date())")
+        // print("Activity detected at \(Date())")
     }
     
     @objc func userDidBecomeActive(notification: Notification) {
@@ -178,6 +179,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             circleView.needsDisplay = true
         } else {
             stopTimer()
+            timerFinished()
+        }
+    }
+    
+    func timerFinished() {
+        // Set the timer finished state in the circle view
+        circleView.timerFinished = true
+        
+        // Play alarm sound
+        NSSound.beep()
+        
+        // Start flashing animation
+        startFlashingAnimation()
+        
+        // Print message to console
+        print("Time's up! Your Pomodoro session has ended.")
+    }
+    
+    func startFlashingAnimation() {
+        // Create a repeating timer for flashing effect
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            // Toggle flashing state
+            self.circleView.isFlashing.toggle()
+            self.circleView.needsDisplay = true
+            
+            // Stop flashing after 5 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                timer.invalidate()
+                self.circleView.isFlashing = false
+                self.circleView.needsDisplay = true
+            }
         }
     }
     
@@ -195,6 +232,10 @@ class CircleView: NSView {
     
     // Font for the timer display
     let timerFont = NSFont.systemFont(ofSize: 24, weight: .medium)
+    
+    // Properties for timer finished state and flashing animation
+    var timerFinished = false
+    var isFlashing = false
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         self.wantsLayer = true
@@ -220,8 +261,27 @@ class CircleView: NSView {
         
         circlePath.fill()
         
-        // Draw the timer text
-        if let delegate = delegate {
+        // Draw the timer text or "Time's up!" message
+        if self.timerFinished {
+            // Display "Time's up!" message
+            let message = "Time's up!"
+            
+            let textAttributes: [NSAttributedString.Key: Any] = [
+                .font: timerFont,
+                .foregroundColor: NSColor.white
+            ]
+            
+            let textSize = message.size(withAttributes: textAttributes)
+            let textRect = NSRect(
+                x: (bounds.width - textSize.width) / 2,
+                y: (bounds.height - textSize.height) / 2,
+                width: textSize.width,
+                height: textSize.height
+            )
+            
+            message.draw(in: textRect, withAttributes: textAttributes)
+        } else if let delegate = delegate {
+            // Display the timer
             let minutes = delegate.secondsRemaining / 60
             let seconds = delegate.secondsRemaining % 60
             let timeString = String(format: "%02d:%02d", minutes, seconds)
@@ -267,8 +327,14 @@ class CircleView: NSView {
     }
     
     override func mouseUp(with event: NSEvent) {
-        // We're no longer using clicks to start/stop the timer,
-        // but we'll keep the code in case we want to revert or add additional functionality
+        // Check if the timer has finished and reset it on click
+        if timerFinished {
+            timerFinished = false
+            delegate?.resetTimer()
+            delegate?.startTimer() // Automatically start the timer after reset
+            needsDisplay = true
+            print("Timer reset and restarted by mouse click")
+        }
         
         // Reset the drag location
         delegate?.initialDragLocation = nil
