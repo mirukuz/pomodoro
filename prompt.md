@@ -16,3 +16,7 @@ Feature 3:
 
 Feature 4:
 - Everytime when the Pomodoro timer is finished, it should write a log to a file in the user's home directory, record the start time, the duration of active time, and the end time
+
+Clean up:
+I'm happy with the functionality now, let's clean up the code
+- Now the main.swift file is getting pretty long, can we break it down to small files to make it more readable
