@@ -12,7 +12,7 @@ Feature 2:
 Feature 3:
 - when the counting down is finished, giving an notification of "Time's up!"
 - Once time is up, you have to click the circle to re-enable the timer counting down, the acticity detection won't be able to retrigger the timer without clicking
-- No i mean once it reaches 0, you won't be able to restart it through user activity, you can only restart by clicking the circle.  but once it restart, when it paused, you can retrigger it through activity
+- Fix: No i mean once it reaches 0, you won't be able to restart it through user activity, you can only restart by clicking the circle.  but once it restart, when it paused, you can retrigger it through activity
 
 Feature 4:
-- The app should be able to store the time length of how long the user has been active
+- Everytime when the Pomodoro timer is finished, it should write a log to a file in the user's home directory, record the start time, the duration of active time, and the end time

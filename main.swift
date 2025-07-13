@@ -11,10 +11,10 @@ func keyboardCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
 }
 
 // Default Pomodoro duration in minutes
-let defaultPomodoroMinutes = 25
+let defaultPomodoroMinutes = 1
 
 // Inactivity threshold in seconds before stopping the timer
-let inactivityThresholdSeconds = 5
+let inactivityThresholdSeconds = 60
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     // Activity monitoring
@@ -28,6 +28,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var timer: Timer?
     var secondsRemaining: Int = defaultPomodoroMinutes * 60 // Convert minutes to seconds
     var isTimerRunning = false
+    
+    // Session tracking for logging
+    var sessionStartTime: Date?
+    var activeTimeInSession: TimeInterval = 0
+    var lastActiveCheckTime: Date?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Set up activity monitoring
@@ -160,6 +165,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func startTimer() {
         if timer == nil && secondsRemaining > 0 {
+            // Record session start time if this is a new session
+            if sessionStartTime == nil {
+                sessionStartTime = Date()
+                activeTimeInSession = 0
+            }
+            
+            // Start tracking active time
+            lastActiveCheckTime = Date()
+            
             timer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(updateTimer), userInfo: nil, repeats: true)
             isTimerRunning = true
             circleView.needsDisplay = true
@@ -174,6 +188,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func updateTimer() {
+        // Update active time tracking if user is active
+        if let lastCheck = lastActiveCheckTime {
+            let now = Date()
+            let timeSinceLastCheck = now.timeIntervalSince(lastCheck)
+            
+            // Only count time as active if user has been active recently
+            if now.timeIntervalSince(lastActivityTime) < Double(inactivityThresholdSeconds) {
+                activeTimeInSession += timeSinceLastCheck
+            }
+            
+            lastActiveCheckTime = now
+        }
+        
         if secondsRemaining > 0 {
             secondsRemaining -= 1
             circleView.needsDisplay = true
@@ -193,8 +220,67 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Start flashing animation
         startFlashingAnimation()
         
+        // Log the completed session
+        logPomodoroSession()
+        
+        // Reset session tracking
+        sessionStartTime = nil
+        activeTimeInSession = 0
+        lastActiveCheckTime = nil
+        
         // Print message to console
         print("Time's up! Your Pomodoro session has ended.")
+    }
+    
+    func logPomodoroSession() {
+        guard let startTime = sessionStartTime else { return }
+        
+        let endTime = Date()
+        let totalSessionDuration = endTime.timeIntervalSince(startTime)
+        
+        // Format the log entry
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        
+        let logEntry = """
+        ===== Pomodoro Session =====
+        Start Time: \(dateFormatter.string(from: startTime))
+        End Time: \(dateFormatter.string(from: endTime))
+        Total Duration: \(formatTimeInterval(totalSessionDuration))
+        Active Time: \(formatTimeInterval(activeTimeInSession))
+        Inactive Time: \(formatTimeInterval(totalSessionDuration - activeTimeInSession))
+        ===========================
+        
+        """
+        
+        // Get the log file path in the user's home directory
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        let logFilePath = homeDirectory.appendingPathComponent("pomodoro_log.txt")
+        
+        do {
+            // Append to existing file or create a new one
+            if FileManager.default.fileExists(atPath: logFilePath.path) {
+                let existingContent = try String(contentsOf: logFilePath, encoding: .utf8)
+                try (existingContent + logEntry).write(to: logFilePath, atomically: true, encoding: .utf8)
+            } else {
+                try logEntry.write(to: logFilePath, atomically: true, encoding: .utf8)
+            }
+            print("Session logged to: \(logFilePath.path)")
+        } catch {
+            print("Error writing to log file: \(error.localizedDescription)")
+        }
+    }
+    
+    func formatTimeInterval(_ interval: TimeInterval) -> String {
+        let hours = Int(interval) / 3600
+        let minutes = (Int(interval) % 3600) / 60
+        let seconds = Int(interval) % 60
+        
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
     }
     
     func startFlashingAnimation() {
